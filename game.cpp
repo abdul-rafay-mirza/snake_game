@@ -38,19 +38,24 @@ enum GAME_STATE {
 };
 
 GAME_STATE DrawMenu() {
-    DrawText("Snake Game", 100, 100, 50, BLACK);
+    int fontSize = 50;
+    const char* menuHeadingText = "Snake Game";
+    int textWidth = MeasureText(menuHeadingText, fontSize);
+    float titlePosX = (GetScreenWidth() - textWidth) / 2.0f;
+    float titlePosY = (GetScreenHeight() - fontSize) / 4.0f;
+    DrawText(menuHeadingText, titlePosX, titlePosY, fontSize, BLACK);
 
     // Buttons
-    const Vector2 BUTTON_COORDS = {120, 200};       
+    const Vector2 BUTTON_COORDS = {titlePosX + 20, titlePosY + 100};       
     const int BUTTON_WIDTH = 250;   // The width of each button
     const int BUTTON_HEIGHT = 60;   // The height of each button
-
+    const int FONT_SIZE = 20;
     const int BUTTON_GAP = 30;      // The gap between the start button and the exit button in pixels
 
-    Button play_btn = Button({BUTTON_COORDS.x, BUTTON_COORDS.y, BUTTON_WIDTH, BUTTON_HEIGHT}, "Play", 20);
+    Button play_btn = Button({BUTTON_COORDS.x, BUTTON_COORDS.y, BUTTON_WIDTH, BUTTON_HEIGHT}, "Play", FONT_SIZE);
     play_btn.Draw();
 
-    Button exit_btn = Button({BUTTON_COORDS.x, BUTTON_COORDS.y + BUTTON_HEIGHT + BUTTON_GAP, BUTTON_WIDTH, BUTTON_HEIGHT}, "Exit", 20);
+    Button exit_btn = Button({BUTTON_COORDS.x, BUTTON_COORDS.y + BUTTON_HEIGHT + BUTTON_GAP, BUTTON_WIDTH, BUTTON_HEIGHT}, "Exit", FONT_SIZE);
     exit_btn.Draw();
 
     if (exit_btn.IsClicked()) {
@@ -63,13 +68,33 @@ GAME_STATE DrawMenu() {
 }
 
 GAME_STATE DrawPlayScreen() {
-    int fontSize = 20;
-    const char* text = "TODO: Make the actual Playing Grid";
-    int textWidth = MeasureText(text, fontSize);
-    float posX = (GetScreenWidth() - textWidth) / 2.0f;
-    float posY = (GetScreenHeight() - fontSize) / 2.0f;
+    const int CELL_COUNT = 15;
+    const float CELL_SIZE = static_cast<float>(GetScreenWidth()) / CELL_COUNT;
+    const float GAP = 1.0f;
+    Vector2 logicalCoordinates;
+    Vector2 actualCoord;
 
-    DrawText(text, posX, posY, fontSize, BLACK);
+    for (size_t i = 0; i < CELL_COUNT; i++) {
+        float x = static_cast<float>(i);
+
+        for (size_t j = 0; j < CELL_COUNT; j++) {
+            float y = static_cast<float>(j);
+
+            actualCoord = {CELL_SIZE * i,CELL_SIZE * j};
+            logicalCoordinates = {x, y};
+
+            // Draw the actual grid
+            if (y != CELL_COUNT - 1 && y != 0 && x != 0 && x != CELL_COUNT - 1){
+                DrawRectangleLinesEx({actualCoord.x, actualCoord.y, CELL_SIZE - GAP, CELL_SIZE - GAP}, 1.0f, BLACK);
+            }
+        }
+    }
+
+    const char* score = "Score: ";
+    const int fontSize = 20;
+    Vector2 scoreCoords = {CELL_SIZE, static_cast<float>(GetScreenHeight()) - fontSize};
+    DrawText(score, scoreCoords.x, scoreCoords.y, fontSize, BLACK);
+
     return PLAYING;
 }
 
@@ -78,9 +103,12 @@ int main() {
 
     GAME_STATE gameState = MENU;
 
-    InitWindow(500, 500, "Snake Game");
+    const int SCREEN_WIDTH = 500;
+    const int SCREEN_HEIGHT = 500;
 
-    while(!WindowShouldClose()) {
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Snake Game");
+
+    while (!WindowShouldClose()) {
 
         if (gameState == MENU) {
             gameState = DrawMenu();
