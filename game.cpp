@@ -1,10 +1,6 @@
 #include <iostream>
 #include <raylib.h>
-#include <raygui.h>
 #include <vector>
-
-float elapsedTime = 0.0f;
-std::vector<Vector2> cellsOccupiedBySnake;
 
 class Button {
 private:
@@ -44,13 +40,16 @@ class Snake {
 private:
     Vector2 head;
     Vector2 tail;
-    SNAKE_DIRECTION direction;
-    float cellSize;
-    float gap;
+    SNAKE_DIRECTION nextDirection;
+    SNAKE_DIRECTION previousDirection = RIGHT;
+    std::vector<Vector2> cellsOccupiedBySnake;
+    float elapsedTime = 0.0f;
+    Color color = BLACK;          // Snake color
+    float movementSpeed = 0.6f;
 
 public:
-    Snake(Vector2 head, Vector2 tail, SNAKE_DIRECTION direction, float cellSize, float gap)
-        : head(head), tail(tail), direction(direction), cellSize(cellSize), gap(gap) {}
+    Snake(Vector2 head, Vector2 tail, SNAKE_DIRECTION direction)
+        : head(head), tail(tail), nextDirection(direction) {}
 
     // Takes in a logical coordinate (Vector2) of a cell and fills its corresponding actual cell on the screen
     void fillCell(Vector2 coord, Color cellColor, float cellSize, float gap) {
@@ -58,24 +57,46 @@ public:
         DrawRectangleRec(actualCell, cellColor);
     }
 
-    void DrawCells() {
-        for (int i = 0; i < cellsOccupiedBySnake.size(); i++) {
-            fillCell(cellsOccupiedBySnake[i], BLACK, cellSize, gap);
+    void DrawCells(float cellSize, float gap) {
+        for (int i = 0; i < this->cellsOccupiedBySnake.size(); i++) {
+            fillCell(this->cellsOccupiedBySnake[i], BLACK, cellSize, gap);
         }
+        fillCell(head, color, cellSize, gap);
     }
 
     void Move() {
-        float movementSpeed = 1.0f;
+        // Choose direction every single game tick
+        if (IsKeyDown(KEY_W)) nextDirection = UP;
+        if (IsKeyDown(KEY_A)) nextDirection = LEFT;
+        if (IsKeyDown(KEY_S)) nextDirection = DOWN;
+        if (IsKeyDown(KEY_D)) nextDirection = RIGHT;
+
         float dt = GetFrameTime();
 
-        elapsedTime = elapsedTime + dt;
-        // std::cout << elapsedTime << std::endl;
+        this->elapsedTime = this->elapsedTime + dt;
 
-        if (elapsedTime > movementSpeed) {
-            cellsOccupiedBySnake.push_back(head);
-            std::cout << head.x << std::endl;
-            this->head.x++;
-            elapsedTime = 0.0f;
+        if (elapsedTime > this->movementSpeed) {
+            this->cellsOccupiedBySnake.push_back(head);
+
+            // Debugging
+            // std::cout << "Previous: " << previousDirection << std::endl;
+            // std::cout << "Next: " << nextDirection << std::endl;
+
+            // So that the sanke cannot travel backwards
+            if (previousDirection == RIGHT && nextDirection == LEFT) nextDirection = RIGHT;
+            if (previousDirection == LEFT && nextDirection == RIGHT) nextDirection = LEFT;
+            if (previousDirection == UP && nextDirection == DOWN) nextDirection = UP;
+            if (previousDirection == DOWN && nextDirection == UP) nextDirection = DOWN;
+
+            switch (nextDirection) {
+                case UP : this->head.y--; break;
+                case LEFT : this->head.x--; break;
+                case DOWN : this->head.y++; break;
+                case RIGHT : this->head.x++; break;
+            }
+            previousDirection = nextDirection;
+
+            this->elapsedTime = 0.0f;
         }
     }
 };
@@ -118,11 +139,11 @@ GAME_STATE DrawMenu() {
     }
 }
 
-GAME_STATE DrawPlayScreen() {
+GAME_STATE DrawPlayScreen(Snake& snake) {
     const int CELL_COUNT = 15;
     const float CELL_SIZE = static_cast<float>(GetScreenWidth()) / CELL_COUNT;
     const float GAP = 1.0f;
-    Vector2 logicalCoordinates;
+    Vector2 logicalCoordinate;
     Vector2 actualCoord;
 
     for (size_t i = 0; i < CELL_COUNT; i++) {
@@ -132,7 +153,7 @@ GAME_STATE DrawPlayScreen() {
             float y = static_cast<float>(j);
 
             actualCoord = {CELL_SIZE * i,CELL_SIZE * j};
-            logicalCoordinates = {x, y};
+            logicalCoordinate = {x, y};
 
             // Draw the actual grid
             if (y != CELL_COUNT - 1 && y != 0 && x != 0 && x != CELL_COUNT - 1){
@@ -146,10 +167,8 @@ GAME_STATE DrawPlayScreen() {
     Vector2 scoreCoords = {CELL_SIZE, static_cast<float>(GetScreenHeight()) - fontSize};
     DrawText(score, scoreCoords.x, scoreCoords.y, fontSize, BLACK);
 
-    Snake snake = Snake({2, 2}, {2, 2}, RIGHT, CELL_SIZE, GAP);
+    snake.DrawCells(CELL_SIZE, GAP);
     snake.Move();
-    snake.DrawCells();
-    // snake.fillCell({2, 2}, BLACK, CELL_SIZE, GAP);
 
     return PLAYING;
 }
@@ -163,21 +182,23 @@ int main() {
     const int SCREEN_HEIGHT = 500;
 
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Snake Game");
-    SetTargetFPS(10);
+    // SetTargetFPS(10);
+
+    Snake snake = Snake({2, 2}, {2, 2}, RIGHT);
 
     while (!WindowShouldClose()) {
         BeginDrawing();
+        ClearBackground(RAYWHITE);
         
         if (gameState == MENU) {
             gameState = DrawMenu();
         } else if (gameState == EXIT) {
             break;
         } else if (gameState == PLAYING) {
-            gameState = DrawPlayScreen();
+            gameState = DrawPlayScreen(snake);
         }
 
 
-        ClearBackground(RAYWHITE);
         EndDrawing();
     }
 
