@@ -2,6 +2,38 @@
 #include <raylib.h>
 #include <vector>
 
+// Takes in a logical coordinate (Vector2) of a cell and fills its corresponding actual cell on the screen
+void FillCell(Vector2 coord, Color color, float cellSize, float gap) {
+    Rectangle actualCell = {coord.x * cellSize, coord.y * cellSize, cellSize - gap, cellSize - gap};
+    DrawRectangleRec(actualCell, color);
+}
+
+class Food {
+private:
+    Vector2 position;
+    Color color = RED;
+    int cellCount;
+
+public:
+    Food(int cellCount) : cellCount(cellCount) {
+        Respawn();
+    }
+
+    Vector2 GetPosition() const {
+        return position;
+    }
+
+    void Respawn() {
+        // Keep food off the border cells
+        position.x = static_cast<float>(GetRandomValue(1, cellCount - 2));
+        position.y = static_cast<float>(GetRandomValue(1, cellCount - 2));
+    }
+
+    void Draw(float cellSize, float gap) const {
+        FillCell(position, color, cellSize, gap);
+    }
+};
+
 class Button {
 private:
     Rectangle bounds;
@@ -50,17 +82,11 @@ public:
     Snake(Vector2 startPos, SNAKE_DIRECTION direction)
         : head(startPos), nextDirection(direction) {}
 
-    // Takes in a logical coordinate (Vector2) of a cell and fills its corresponding actual cell on the screen
-    void fillCell(Vector2 coord, float cellSize, float gap) {
-        Rectangle actualCell = {coord.x * cellSize, coord.y * cellSize, cellSize - gap, cellSize - gap};
-        DrawRectangleRec(actualCell, this->color);
-    }
-
     void DrawCells(float cellSize, float gap) {
         for (int i = 0; i < this->body.size(); i++) {
-            fillCell(this->body[i], cellSize, gap);
+            FillCell(this->body[i], this->color, cellSize, gap);
         }
-        fillCell(head, cellSize, gap);
+        FillCell(head, this->color, cellSize, gap);
     }
 
     void Move() {
@@ -142,24 +168,23 @@ GAME_STATE DrawMenu() {
     }
 }
 
-GAME_STATE DrawPlayScreen(Snake& snake) {
-    const int CELL_COUNT = 15;
-    const float CELL_SIZE = static_cast<float>(GetScreenWidth()) / CELL_COUNT;
+GAME_STATE DrawPlayScreen(int cellCount, Snake& snake, Food& food) {
+    const float CELL_SIZE = static_cast<float>(GetScreenWidth()) / cellCount;
     const float GAP = 1.0f;
     Vector2 logicalCoordinate;
     Vector2 actualCoord;
 
-    for (size_t i = 0; i < CELL_COUNT; i++) {
+    for (size_t i = 0; i < cellCount; i++) {
         float x = static_cast<float>(i);
 
-        for (size_t j = 0; j < CELL_COUNT; j++) {
+        for (size_t j = 0; j < cellCount; j++) {
             float y = static_cast<float>(j);
 
             actualCoord = {CELL_SIZE * i,CELL_SIZE * j};
             logicalCoordinate = {x, y};
 
             // Draw the actual grid
-            if (y != CELL_COUNT - 1 && y != 0 && x != 0 && x != CELL_COUNT - 1){
+            if (y != cellCount - 1 && y != 0 && x != 0 && x != cellCount - 1){
                 DrawRectangleLinesEx({actualCoord.x, actualCoord.y, CELL_SIZE - GAP, CELL_SIZE - GAP}, 1.0f, BLACK);
             }
         }
@@ -170,6 +195,7 @@ GAME_STATE DrawPlayScreen(Snake& snake) {
     Vector2 scoreCoords = {CELL_SIZE, static_cast<float>(GetScreenHeight()) - fontSize};
     DrawText(score, scoreCoords.x, scoreCoords.y, fontSize, BLACK);
 
+    food.Draw(CELL_SIZE, GAP);
     snake.DrawCells(CELL_SIZE, GAP);
     snake.Move();
 
@@ -183,11 +209,13 @@ int main() {
 
     const int SCREEN_WIDTH = 500;
     const int SCREEN_HEIGHT = 500;
+    const int CELL_COUNT = 15;
 
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Snake Game");
     // SetTargetFPS(10);
 
     Snake snake = Snake({2, 2}, RIGHT);
+    Food food = Food(CELL_COUNT);
 
     while (!WindowShouldClose()) {
         BeginDrawing();
@@ -198,9 +226,8 @@ int main() {
         } else if (gameState == EXIT) {
             break;
         } else if (gameState == PLAYING) {
-            gameState = DrawPlayScreen(snake);
+            gameState = DrawPlayScreen(CELL_COUNT, snake, food);
         }
-
 
         EndDrawing();
     }
