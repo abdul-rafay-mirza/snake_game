@@ -39,29 +39,28 @@ enum SNAKE_DIRECTION {
 class Snake {
 private:
     Vector2 head;
-    Vector2 tail;
     SNAKE_DIRECTION nextDirection;
     SNAKE_DIRECTION previousDirection = RIGHT;
-    std::vector<Vector2> cellsOccupiedBySnake;
+    std::vector<Vector2> body;
     float elapsedTime = 0.0f;
-    Color color = BLACK;          // Snake color
+    Color color = BLACK;
     float movementSpeed = 0.6f;
 
 public:
-    Snake(Vector2 head, Vector2 tail, SNAKE_DIRECTION direction)
-        : head(head), tail(tail), nextDirection(direction) {}
+    Snake(Vector2 startPos, SNAKE_DIRECTION direction)
+        : head(startPos), nextDirection(direction) {}
 
     // Takes in a logical coordinate (Vector2) of a cell and fills its corresponding actual cell on the screen
-    void fillCell(Vector2 coord, Color cellColor, float cellSize, float gap) {
+    void fillCell(Vector2 coord, float cellSize, float gap) {
         Rectangle actualCell = {coord.x * cellSize, coord.y * cellSize, cellSize - gap, cellSize - gap};
-        DrawRectangleRec(actualCell, cellColor);
+        DrawRectangleRec(actualCell, this->color);
     }
 
     void DrawCells(float cellSize, float gap) {
-        for (int i = 0; i < this->cellsOccupiedBySnake.size(); i++) {
-            fillCell(this->cellsOccupiedBySnake[i], BLACK, cellSize, gap);
+        for (int i = 0; i < this->body.size(); i++) {
+            fillCell(this->body[i], cellSize, gap);
         }
-        fillCell(head, color, cellSize, gap);
+        fillCell(head, cellSize, gap);
     }
 
     void Move() {
@@ -76,7 +75,11 @@ public:
         this->elapsedTime = this->elapsedTime + dt;
 
         if (elapsedTime > this->movementSpeed) {
-            this->cellsOccupiedBySnake.push_back(head);
+            this->body.push_back(head);
+            
+            if (body.size() > 0) {
+                this->body.erase(body.begin());
+            }
 
             // Debugging
             // std::cout << "Previous: " << previousDirection << std::endl;
@@ -184,7 +187,7 @@ int main() {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Snake Game");
     // SetTargetFPS(10);
 
-    Snake snake = Snake({2, 2}, {2, 2}, RIGHT);
+    Snake snake = Snake({2, 2}, RIGHT);
 
     while (!WindowShouldClose()) {
         BeginDrawing();
