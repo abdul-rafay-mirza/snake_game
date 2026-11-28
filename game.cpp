@@ -8,32 +8,6 @@ void FillCell(Vector2 coord, Color color, float cellSize, float gap) {
     DrawRectangleRec(actualCell, color);
 }
 
-class Food {
-private:
-    Vector2 position;
-    Color color = RED;
-    int cellCount;
-
-public:
-    Food(int cellCount) : cellCount(cellCount) {
-        Respawn();
-    }
-
-    Vector2 GetPosition() const {
-        return position;
-    }
-
-    void Respawn() {
-        // Keep food off the border cells
-        position.x = static_cast<float>(GetRandomValue(1, cellCount - 2));
-        position.y = static_cast<float>(GetRandomValue(1, cellCount - 2));
-    }
-
-    void Draw(float cellSize, float gap) const {
-        FillCell(position, color, cellSize, gap);
-    }
-};
-
 class Button {
 private:
     Rectangle bounds;
@@ -82,6 +56,14 @@ public:
     Snake(Vector2 startPos, SNAKE_DIRECTION direction)
         : head(startPos), nextDirection(direction) {}
 
+    Vector2 GetHead() const {
+        return this->head;
+    }
+
+    const std::vector<Vector2>& GetBody() const {
+        return this->body;
+    }
+
     void DrawCells(float cellSize, float gap) {
         for (int i = 0; i < this->body.size(); i++) {
             FillCell(this->body[i], this->color, cellSize, gap);
@@ -127,6 +109,56 @@ public:
 
             this->elapsedTime = 0.0f;
         }
+    }
+};
+
+class Food {
+private:
+    Vector2 position;
+    Color color = RED;
+    int cellCount;
+    const Snake& snake;
+
+public:
+    Food(int cellCount, const Snake& snake) : cellCount(cellCount), snake(snake) {
+        Respawn();
+    }
+
+    Vector2 GetPosition() const {
+        return position;
+    }
+
+    void Respawn() {
+        Vector2 head = this->snake.GetHead();
+        Vector2 freeSpace;
+        bool isFree = true;
+
+        while (true) {
+            isFree = true;
+            freeSpace.x = static_cast<float>(GetRandomValue(1, this->cellCount - 2));
+            freeSpace.y = static_cast<float>(GetRandomValue(1, this->cellCount - 2));
+            
+            if (head.x == freeSpace.x && head.y == freeSpace.y) {
+                isFree = false;
+            }
+
+            for (const auto& pos : this->snake.GetBody()) {
+                if (pos.x == freeSpace.x && pos.y == freeSpace.y) {
+                    isFree = false;
+                    break;
+                }
+            }
+
+            if (isFree == true) {
+                break;
+            }
+        }
+
+        position = freeSpace;
+    }
+
+    void Draw(float cellSize, float gap) const {
+        FillCell(position, color, cellSize, gap);
     }
 };
 
@@ -215,7 +247,7 @@ int main() {
     // SetTargetFPS(10);
 
     Snake snake = Snake({2, 2}, RIGHT);
-    Food food = Food(CELL_COUNT);
+    Food food = Food(CELL_COUNT, snake);
 
     while (!WindowShouldClose()) {
         BeginDrawing();
